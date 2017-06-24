@@ -57,6 +57,7 @@ with tf.Session() as sess:
             print('Running reward for the ' + str(num_bandits) + ' bandits: ' + str(total_reward))
         i+=1
 print('The agent thinks bandit ' + str(np.argmax(ww)+1) + ' is the most promising....')
+
 if np.argmax(ww) == np.argmax(-np.array(bandits)):
     print ('...and it was right!')
 else:

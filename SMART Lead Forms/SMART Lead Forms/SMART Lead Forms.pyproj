@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>88774057-9799-42d7-91f0-000007be2270</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>SMART_Lead_Forms.py</StartupFile>
+    <StartupFile>contextual_bandit.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -22,6 +22,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="contextual_bandit.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="SMART_Lead_Forms.py" />
   </ItemGroup>
   <ItemGroup>
