@@ -26,21 +26,20 @@ class contextual_bandit():
             return -1
 
 class agent():
-    def __init__(self, lr, s_size, a_size, f_size, state_size):
+    def __init__(self, lr, s_size,a_size):
         #These lines established the feed-forward part of the network. The agent takes a state and produces an action.
-        self.state_in= tf.placeholder(shape=[state_size],dtype=tf.int32)
+        self.state_in= tf.placeholder(shape=[1],dtype=tf.int32)
         state_in_OH = slim.one_hot_encoding(self.state_in,s_size)
         output = slim.fully_connected(state_in_OH,a_size,\
             biases_initializer=None,activation_fn=tf.nn.sigmoid,weights_initializer=tf.ones_initializer())
-        self.output = tf.reshape(output,f_size)
-        self.chosen_action = tf.argmax(self.output,f_size)
+        self.output = tf.reshape(output,[-1])
+        self.chosen_action = tf.argmax(self.output,0)
 
         #The next six lines establish the training proceedure. We feed the reward and chosen action into the network
         #to compute the loss, and use it to update the network.
         self.reward_holder = tf.placeholder(shape=[1],dtype=tf.float32)
-        self.action_holder = tf.placeholder(shape=[f_size],dtype=tf.int32)
-
-        self.responsible_weight = tf.slice(self.output,self.action_holder,tf.ones([f_size], dtype=tf.int32))
+        self.action_holder = tf.placeholder(shape=[1],dtype=tf.int32)
+        self.responsible_weight = tf.slice(self.output,self.action_holder,[1])
         self.loss = -(tf.log(self.responsible_weight)*self.reward_holder)
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=lr)
         self.update = optimizer.minimize(self.loss)
@@ -48,14 +47,14 @@ class agent():
 tf.reset_default_graph() #Clear the Tensorflow graph.
 
 cBandit = contextual_bandit() #Load the bandits.
-myAgent = agent(lr=0.001,s_size=cBandit.num_bandits,a_size=cBandit.num_actions, f_size=5, state_size=1) #Load the agent.
+myAgent = agent(lr=0.001,s_size=cBandit.num_bandits,a_size=cBandit.num_actions) #Load the agent.
 weights = tf.trainable_variables()[0] #The weights we will evaluate to look into the network.
 
 total_episodes = 10000 #Set total number of episodes to train agent on.
 total_reward = np.zeros([cBandit.num_bandits,cBandit.num_actions]) #Set scoreboard for bandits to 0.
 e = 0.1 #Set the chance of taking a random action.
 
-init = tf.global_variables_initializer()
+init = tf.initialize_all_variables()
 
 # Launch the tensorflow graph
 with tf.Session() as sess:
@@ -81,7 +80,6 @@ with tf.Session() as sess:
         if i % 500 == 0:
             print("Mean reward for each of the " + str(cBandit.num_bandits) + " bandits: " + str(np.mean(total_reward,axis=1)))
         i+=1
-
 for a in range(cBandit.num_bandits):
     print("The agent thinks action " + str(np.argmax(ww[a])+1) + " for bandit " + str(a+1) + " is the most promising....")
     if np.argmax(ww[a]) == np.argmin(cBandit.bandits[a]):

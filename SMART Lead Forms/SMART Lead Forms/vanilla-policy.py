@@ -1,7 +1,6 @@
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import numpy as np
-import gym
 import matplotlib.pyplot as plt
 
 try:
@@ -9,9 +8,31 @@ try:
 except:
     xrange = range
 
-env = gym.make('CartPole-v0')
-
 gamma = 0.99
+
+class contextual_bandit():
+    def __init__(self):
+        self.state = 0
+        #List out our bandits. Currently arms 4, 2, and 1 (respectively) are the most optimal.
+        self.bandits = np.array([[0.2,0,-0.0,-5],[0.1,-5,1,0.25],[-5,5,5,5]])
+        self.num_bandits = self.bandits.shape[0]
+        self.num_actions = self.bandits.shape[1]
+        self.num_features = 5
+        
+    def getBandit(self):
+        self.state = np.random.randint(0,len(self.bandits)) #Returns a random state for each episode.
+        return self.state
+        
+    def pullArm(self,action):
+        #Get a random number.
+        bandit = self.bandits[self.state,action]
+        result = np.random.randn(1)
+        if result > bandit:
+            #return a positive reward.
+            return 1
+        else:
+            #return a negative reward.
+            return -1
 
 def discount_rewards(r):
     """ take 1D float array of rewards and compute discounted reward """
@@ -54,7 +75,12 @@ class agent():
 
 tf.reset_default_graph() #Clear the Tensorflow graph.
 
-myAgent = agent(lr=1e-2,s_size=4,a_size=2,h_size=8) #Load the agent.
+bandits = contextual_bandit() #Load the bandits.
+
+num_states = 1;
+num_features = bandits.num_features;
+
+myAgent = agent(lr=1e-2,s_size=bandits.num_bandits,a_size=bandits.num_actions,h_size=num_states * num_features) #Load the agent.
 
 total_episodes = 5000 #Set total number of episodes to train agent on.
 max_ep = 999
@@ -74,7 +100,7 @@ with tf.Session() as sess:
         gradBuffer[ix] = grad * 0
         
     while i < total_episodes:
-        s = env.reset() # number of states
+        s = bandits.getBandit() # current state
         running_reward = 0
         ep_history = []
         for j in range(max_ep):
@@ -83,7 +109,7 @@ with tf.Session() as sess:
             a = np.random.choice(a_dist[0],p=a_dist[0])
             a = np.argmax(a_dist == a)
 
-            s1,r,d,_ = env.step(a) #Get our reward for taking an action given a bandit.
+            s1,r,d,_ = bandits.pullArm(a) #Get our reward for taking an action given a bandit.
             ep_history.append([s,a,r,s1])
             s = s1
             running_reward += r
