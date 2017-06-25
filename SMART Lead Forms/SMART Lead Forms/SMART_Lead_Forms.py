@@ -46,9 +46,60 @@ class agent():
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=lr)
         self.update = optimizer.minimize(self.loss)
 
-tf.reset_default_graph() #Clear the Tensorflow graph.
+def getNextAction(state):
+    tf.reset_default_graph() #Clear the Tensorflow graph.
+
+    myAgent = agent(lr=0.001,s_size=3,a_size=4) #Load the agent.
+    weights = tf.trainable_variables()[0] #The weights we will evaluate to look into the network.
+
+    e = 0.1 #Set the chance of taking a random action.
+    saver = tf.train.Saver([weights])
+
+    init = tf.global_variables_initializer()
+    with tf.Session() as sess:
+        sess.run(init)
+        try:
+            saver.restore(sess, save_path) # restore session variables
+        except:
+            pass
+
+        if np.random.rand(1) < e:
+            return np.random.randint(cBandit.num_actions)
+        else:
+            return sess.run(myAgent.chosen_action,feed_dict={myAgent.state_in:[state]})
+
+def recordReward(state, action, reward):
+    tf.reset_default_graph() #Clear the Tensorflow graph.
+
+    myAgent = agent(lr=0.001,s_size=3,a_size=4) #Load the agent.
+    weights = tf.trainable_variables()[0] #The weights we will evaluate to look into the network.
+
+    e = 0.1 #Set the chance of taking a random action.
+    saver = tf.train.Saver([weights])
+
+    init = tf.global_variables_initializer()
+    with tf.Session() as sess:
+        sess.run(init)
+        try:
+            saver.restore(sess, save_path) # restore session variables
+        except:
+            pass
+
+        #Update the network.
+        feed_dict={myAgent.reward_holder:[reward],myAgent.action_holder:[action],myAgent.state_in:[state]}
+        sess.run([myAgent.update,weights], feed_dict=feed_dict)
+
+        saver.save(sess, save_path) # save session variables each time the network updates
 
 cBandit = contextual_bandit() #Load the bandits.
+nextAction = getNextAction(2)
+
+reward = cBandit.pullArm(nextAction) #Get our reward for taking an action given a bandit.
+
+recordReward(2, nextAction, reward)
+
+tf.reset_default_graph() #Clear the Tensorflow graph.
+
 myAgent = agent(lr=0.001,s_size=cBandit.num_bandits,a_size=cBandit.num_actions) #Load the agent.
 weights = tf.trainable_variables()[0] #The weights we will evaluate to look into the network.
 
