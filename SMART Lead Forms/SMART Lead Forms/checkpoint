@@ -1,0 +1,2 @@
+model_checkpoint_path: "smart_lead_forms_session.ckpt"
+all_model_checkpoint_paths: "smart_lead_forms_session.ckpt"

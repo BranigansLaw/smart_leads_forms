@@ -2,6 +2,8 @@ import tensorflow as tf
 import tensorflow.contrib.layers as slim
 import numpy as np
 
+save_path = "./smart_lead_forms_session.ckpt"
+
 class contextual_bandit():
     def __init__(self):
         self.state = 0
@@ -50,15 +52,23 @@ cBandit = contextual_bandit() #Load the bandits.
 myAgent = agent(lr=0.001,s_size=cBandit.num_bandits,a_size=cBandit.num_actions) #Load the agent.
 weights = tf.trainable_variables()[0] #The weights we will evaluate to look into the network.
 
-total_episodes = 10000 #Set total number of episodes to train agent on.
+total_episodes = 100 #Set total number of episodes to train agent on.
 total_reward = np.zeros([cBandit.num_bandits,cBandit.num_actions]) #Set scoreboard for bandits to 0.
 e = 0.1 #Set the chance of taking a random action.
 
-init = tf.initialize_all_variables()
+saver = tf.train.Saver([weights])
+
+init = tf.global_variables_initializer()
 
 # Launch the tensorflow graph
 with tf.Session() as sess:
     sess.run(init)
+
+    try:
+        saver.restore(sess, save_path) # restore session variables
+    except:
+        pass
+
     i = 0
     while i < total_episodes:
         s = cBandit.getBandit() #Get a state from the environment.
@@ -74,12 +84,15 @@ with tf.Session() as sess:
         #Update the network.
         feed_dict={myAgent.reward_holder:[reward],myAgent.action_holder:[action],myAgent.state_in:[s]}
         _,ww = sess.run([myAgent.update,weights], feed_dict=feed_dict)
+
+        saver.save(sess, save_path) # save session variables each time the network updates
         
         #Update our running tally of scores.
         total_reward[s,action] += reward
-        if i % 500 == 0:
+        if i % 10 == 0:
             print("Mean reward for each of the " + str(cBandit.num_bandits) + " bandits: " + str(np.mean(total_reward,axis=1)))
         i+=1
+
 for a in range(cBandit.num_bandits):
     print("The agent thinks action " + str(np.argmax(ww[a])+1) + " for bandit " + str(a+1) + " is the most promising....")
     if np.argmax(ww[a]) == np.argmin(cBandit.bandits[a]):
